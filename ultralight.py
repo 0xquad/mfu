@@ -13,6 +13,10 @@ import os
 
 
 
+__all__ = 'MFUCard MFUPage'.split()
+
+
+
 class MFUCard:
     def __init__(self, *, bytes=None, file=None, hexfile=None):
         import builtins
