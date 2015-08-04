@@ -9,7 +9,7 @@ class MFUPage:
     # A page is just an indexed view in a card.
 
     def __init__(self, card, index):
-        if not isinstance(card, MifareUltralight):
+        if not isinstance(card, MFUCard):
             raise TypeError('invalid card object')
         elif 0 <= index < 16:
             self._card = card
@@ -61,7 +61,7 @@ class MFUPage:
                 return (1 << self._index) & locked_bits != 0
 
 
-class MifareUltralight:
+class MFUCard:
     def __init__(self, *, bytes=None, file=None, hexfile=None):
         import builtins
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
                 '00000000'
             )
             content = bytearray.fromhex(content)
-            self.card = MifareUltralight(bytes=content)
+            self.card = MFUCard(bytes=content)
 
         def test_iter_bytes(self):
             iterator = iter(self.card)
@@ -455,28 +455,28 @@ if __name__ == '__main__':
 
         def test_init_default_empty(self):
             # initialized to all zeroes
-            card = MifareUltralight()
+            card = MFUCard()
             self.assertEqual(bytes(card), b'\x00' * 64)
 
         def test_init_one_param_only(self):
             with self.assertRaises(RuntimeError):
-                mfu = MifareUltralight(bytes=b'abcd'*4, file=1)
+                mfu = MFUCard(bytes=b'abcd'*4, file=1)
             with self.assertRaises(RuntimeError):
-                mfu = MifareUltralight(bytes=b'abcd'*4, hexfile=1)
+                mfu = MFUCard(bytes=b'abcd'*4, hexfile=1)
             with self.assertRaises(RuntimeError):
-                mfu = MifareUltralight(file=1, hexfile=1)
+                mfu = MFUCard(file=1, hexfile=1)
             with self.assertRaises(RuntimeError):
-                mfu = MifareUltralight(bytes=b'abcd'*4, file=1, hexfile=1)
+                mfu = MFUCard(bytes=b'abcd'*4, file=1, hexfile=1)
 
         def test_init_bytestring(self):
             # initialized with bytes, must be 64 bytes
-            card = MifareUltralight(bytes=b'\x01' * 64)
+            card = MFUCard(bytes=b'\x01' * 64)
             self.assertEqual(bytes(card), b'\x01' * 64)
 
         def test_init_bytes(self):
-            card = MifareUltralight(bytes=bytes(64))
+            card = MFUCard(bytes=bytes(64))
             self.assertEqual(bytes(card), b'\x00' * 64)
-            card = MifareUltralight(bytes=bytearray([i for i in range(64)]))
+            card = MFUCard(bytes=bytearray([i for i in range(64)]))
             self.assertEqual(list(card), [i for i in range(64)])
 
         def test_init_from_file(self):
@@ -486,7 +486,7 @@ if __name__ == '__main__':
             fp_mock.fileno.return_value = 3
             with patch('builtins.open', return_value=fp_mock) as mock_open, \
                  patch('os.read', return_value=content) as mock_sysread:
-                card = MifareUltralight(file='card.bin')
+                card = MFUCard(file='card.bin')
                 self.assertEqual(bytes(card), content)
 
         def test_init_from_file_descriptor(self):
@@ -494,7 +494,7 @@ if __name__ == '__main__':
                 return b'\x01' * n
 
             with patch('os.read', wraps=sysread) as mock_sysread:
-                card = MifareUltralight(file=3)
+                card = MFUCard(file=3)
                 mock_sysread.assert_called_with(3, ANY)
                 self.assertEqual(bytes(card), b'\x01' * 64)
 
@@ -505,7 +505,7 @@ if __name__ == '__main__':
             fp_mock.fileno.return_value = 3
             with patch('builtins.open', return_value=fp_mock) as mock_open, \
                  patch('os.read', return_value=content) as mock_sysread:
-                card = MifareUltralight(hexfile='card.txt')
+                card = MFUCard(hexfile='card.txt')
                 self.assertEqual(bytes(card), b'\x0b\xad\xc0\xde' * 16)
 
         def test_init_from_hexfile_file_descriptor(self):
@@ -535,7 +535,7 @@ if __name__ == '__main__':
                 return chunk
 
             with patch('os.read', wraps=sysread) as mock_sysread:
-                card = MifareUltralight(hexfile=3)
+                card = MFUCard(hexfile=3)
                 mock_sysread.assert_called_with(3, ANY)
                 expected = b''.join(bytes([i, (i + 1) % 16,
                                               (i + 2) % 16,
@@ -546,7 +546,7 @@ if __name__ == '__main__':
     class MFUPageTests(unittest.TestCase):
         def __init__(self, name):
             super().__init__(name)
-            card = MifareUltralight(bytes=bytes([1,2,3,4]*16))
+            card = MFUCard(bytes=bytes([1,2,3,4]*16))
             self.page = MFUPage(card, 0)
 
         def test_iter_bytes(self):
@@ -648,7 +648,7 @@ if __name__ == '__main__':
             self.assertEqual(len(self.page), 4)
 
         def test_init_invalid_page(self):
-            card = MifareUltralight()
+            card = MFUCard()
             with self.assertRaises(ValueError):
                 MFUPage(card, -1)
             with self.assertRaises(ValueError):
@@ -660,14 +660,14 @@ if __name__ == '__main__':
                 MFUPage(card, 0)
 
         def test_readonly(self):
-            card = MifareUltralight()
+            card = MFUCard()
             pages = [MFUPage(card, i) for i in range(16)]
             for p in (0, 1):
                 self.assertTrue(pages[p].readonly)
             for p in range(2, 16):
                 self.assertFalse(pages[p].readonly)
 
-            card = MifareUltralight(bytes=
+            card = MFUCard(bytes=
                 b'\x00\x00\x00\x00' * 2 +
                 # lock bytes value = 0x55aa
                 # meaning:  pages 5, 7, 8, 10, 12, 14 are LOCKED
@@ -693,7 +693,7 @@ if __name__ == '__main__':
     class MFUPageViewProxyTests(unittest.TestCase):
         def __init__(self, name):
             super().__init__(name)
-            self.card = MifareUltralight()
+            self.card = MFUCard()
 
         def test_length(self):
             self.assertEqual(len(self.card.pages), 16)
