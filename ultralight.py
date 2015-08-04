@@ -7,8 +7,10 @@
 # This work is distributed under the LGPL license. See LICENSE.txt for details.
 
 
+
 import sys
 import os
+
 
 
 class MFUCard:
@@ -16,7 +18,8 @@ class MFUCard:
         import builtins
 
         if [bytes, file, hexfile].count(None) < 2:
-            raise RuntimeError('only one of bytes, file or hexfile must be specified')
+            raise RuntimeError('only one of bytes, file or hexfile'
+                               ' must be specified')
 
         if bytes is not None:
             if not isinstance(bytes, (builtins.bytes, bytearray)):
@@ -24,15 +27,18 @@ class MFUCard:
             elif len(bytes) != 64:
                 raise ValueError('byte array must be 64 bytes long')
             self._bytes = builtins.bytes(bytes)
+
         elif file is not None:
             # file can be any of a file object, a filename or a file descriptor
             self._bytes = self._load(file, 'rb')
+
         elif hexfile is not None:
             # hexfile can be any of a file object, a filename or a file
             # descriptor
             content = self._load(hexfile, 'r', 1024)
             content = content.replace(b'\r', b'').replace(b'\n', b'').replace(b' ', b'').replace(b'\t', b'')
             self._bytes = builtins.bytes(bytearray.fromhex(content.decode()))
+
         else:
             self._bytes = builtins.bytes(64)
 
@@ -54,15 +60,19 @@ class MFUCard:
             orig_file.close()
         return content
 
+
     def __iter__(self):
         return iter(self._bytes)
+
 
     def __len__(self):
         return len(self._bytes)
 
+
     def hexdump(self, file=sys.stdout):
         for page in self.pages:
             print('{:08x}'.format(int.from_bytes(page, 'big')), file=file)
+
 
     def dump(self, file):
         if isinstance(file, str):
@@ -73,11 +83,13 @@ class MFUCard:
         else:
             raise TypeError('invalid output file')
 
+
     @property
     def pages(self):
         if self._page_view_proxy is None:
             self._page_view_proxy = MFUPageViewProxy(self)
         return self._page_view_proxy
+
 
     def __getitem__(self, index):
         if isinstance(index, (int, slice)):
@@ -85,39 +97,48 @@ class MFUCard:
         else:
             raise TypeError('invalid index: {}'.format(index))
 
+
     @property
     def id(self):
         # 7-byte UID, excludes the two check bytes
         # MF0ICU1, section 7.5.1
         return int.from_bytes(self._bytes[:3] + self._bytes[4:8], 'big')
 
+
     @property
     def manufacturer(self):
         return self._bytes[0]
+
 
     @property
     def bcc0(self):
         return self._bytes[3]
 
+
     @property
     def bcc1(self):
         return self._bytes[8]
+
 
     @property
     def id0(self):
         return self._bytes[0]
 
+
     @property
     def id1(self):
         return self._bytes[1]
+
 
     @property
     def id2(self):
         return self._bytes[2]
 
+
     @property
     def id3(self):
         return self._bytes[4]
+
 
     @property
     def id4(self):
@@ -127,22 +148,27 @@ class MFUCard:
     def id5(self):
         return self._bytes[6]
 
+
     @property
     def id6(self):
         return self._bytes[7]
+
 
     @property
     def serial(self):
         # same as UID, ref: MF0ICU1.pdf, section 7.5.1
         return self.id
 
+
     @property
     def internal(self):
         return self._bytes[9]
 
+
     @property
     def lockbytes(self):
         return self._bytes[10:12]
+
 
     def is_readonly(self, index):
         if index == 0 or index == 1:
@@ -151,6 +177,7 @@ class MFUCard:
             return False
         else:
             pass
+
 
 
 class MFUPage:
@@ -165,12 +192,15 @@ class MFUPage:
         else:
             raise ValueError('invalid index {}'.format(index))
 
+
     def __len__(self):
         return 4
+
 
     def __str__(self):
         pagebytes = self._i2p()
         return 'Page {}: {} {} {} {}'.format(self._index, *pagebytes)
+
 
     def __getitem__(self, index):
         if isinstance(index, (int, slice)):
@@ -179,20 +209,25 @@ class MFUPage:
         else:
             raise TypeError('invalid index: {}'.format(index))
 
+
     def __iter__(self):
         pagebytes = self._i2p()
         return iter(pagebytes)
+
 
     def _i2p(self):
         """Index to page"""
         pagebytes = self._card[self._index*4:self._index*4+4]
         return pagebytes
 
+
     def to_int(self):
         return int.from_bytes(self._i2p(), 'big')
 
+
     def to_hex(self):
         return ''.join('{:02x}'.format(b) for b in self._i2p())
+
 
     @property
     def readonly(self):
@@ -209,10 +244,12 @@ class MFUPage:
                 return (1 << self._index) & locked_bits != 0
 
 
+
 class MFUPageViewProxy:
     def __init__(self, card):
         self._card = card
         self._pages = [MFUPage(self._card, i) for i in range(16)]
+
 
     def __getitem__(self, index):
         return self._pages[index]
@@ -235,6 +272,7 @@ class MFUPageViewProxy:
             return pages
         else:
             raise TypeError('invalid page index')
+
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
@@ -260,10 +298,11 @@ class MFUPageViewProxy:
         else:
             raise ValueError('value must be a 4-byte string, int or byte array')
 
+
     def __iter__(self):
         return iter(self._pages)
 
+
     def __len__(self):
         return 16
-
 
