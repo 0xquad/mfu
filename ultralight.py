@@ -5,62 +5,6 @@ import sys
 import os
 
 
-class MFUPage:
-    # A page is just an indexed view in a card.
-
-    def __init__(self, card, index):
-        if not isinstance(card, MFUCard):
-            raise TypeError('invalid card object')
-        elif 0 <= index < 16:
-            self._card = card
-            self._index = index
-        else:
-            raise ValueError('invalid index {}'.format(index))
-
-    def __len__(self):
-        return 4
-
-    def __str__(self):
-        pagebytes = self._i2p()
-        return 'Page {}: {} {} {} {}'.format(self._index, *pagebytes)
-
-    def __getitem__(self, index):
-        if isinstance(index, (int, slice)):
-            pagebytes = self._i2p()
-            return pagebytes[index]
-        else:
-            raise TypeError('invalid index: {}'.format(index))
-
-    def __iter__(self):
-        pagebytes = self._i2p()
-        return iter(pagebytes)
-
-    def _i2p(self):
-        """Index to page"""
-        pagebytes = self._card[self._index*4:self._index*4+4]
-        return pagebytes
-
-    def to_int(self):
-        return int.from_bytes(self._i2p(), 'big')
-
-    def to_hex(self):
-        return ''.join('{:02x}'.format(b) for b in self._i2p())
-
-    @property
-    def readonly(self):
-        if self._index in (0, 1):
-            return True
-        else:
-            locked_bits = int.from_bytes(self._card.lockbytes, 'little')
-            # page 2 is read-only only when the block-locking bits are all set
-            if self._index == 2:
-                return locked_bits & 0x0007 == 0x0007
-            elif self._index == 3:
-                return locked_bits & 0x0008 != 0
-            else:
-                return (1 << self._index) & locked_bits != 0
-
-
 class MFUCard:
     def __init__(self, *, bytes=None, file=None, hexfile=None):
         import builtins
@@ -201,6 +145,62 @@ class MFUCard:
             return False
         else:
             pass
+
+
+class MFUPage:
+    # A page is just an indexed view in a card.
+
+    def __init__(self, card, index):
+        if not isinstance(card, MFUCard):
+            raise TypeError('invalid card object')
+        elif 0 <= index < 16:
+            self._card = card
+            self._index = index
+        else:
+            raise ValueError('invalid index {}'.format(index))
+
+    def __len__(self):
+        return 4
+
+    def __str__(self):
+        pagebytes = self._i2p()
+        return 'Page {}: {} {} {} {}'.format(self._index, *pagebytes)
+
+    def __getitem__(self, index):
+        if isinstance(index, (int, slice)):
+            pagebytes = self._i2p()
+            return pagebytes[index]
+        else:
+            raise TypeError('invalid index: {}'.format(index))
+
+    def __iter__(self):
+        pagebytes = self._i2p()
+        return iter(pagebytes)
+
+    def _i2p(self):
+        """Index to page"""
+        pagebytes = self._card[self._index*4:self._index*4+4]
+        return pagebytes
+
+    def to_int(self):
+        return int.from_bytes(self._i2p(), 'big')
+
+    def to_hex(self):
+        return ''.join('{:02x}'.format(b) for b in self._i2p())
+
+    @property
+    def readonly(self):
+        if self._index in (0, 1):
+            return True
+        else:
+            locked_bits = int.from_bytes(self._card.lockbytes, 'little')
+            # page 2 is read-only only when the block-locking bits are all set
+            if self._index == 2:
+                return locked_bits & 0x0007 == 0x0007
+            elif self._index == 3:
+                return locked_bits & 0x0008 != 0
+            else:
+                return (1 << self._index) & locked_bits != 0
 
 
 class MFUPageViewProxy:
