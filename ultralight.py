@@ -36,7 +36,10 @@ class MFUCard:
             # hexfile can be any of a file object, a filename or a file
             # descriptor
             content = self._load(hexfile, 'r', 1024)
-            content = content.replace(b'\r', b'').replace(b'\n', b'').replace(b' ', b'').replace(b'\t', b'')
+            content = (content.replace(b'\r', b'')
+                              .replace(b'\n', b'')
+                              .replace(b' ', b'')
+                              .replace(b'\t', b''))
             self._bytes = builtins.bytes(bytearray.fromhex(content.decode()))
 
         else:
