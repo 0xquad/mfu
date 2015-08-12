@@ -5,4 +5,4 @@
 # This work is distributed under the LGPL license. See LICENSE.txt for details.
 
 
-from ultralight import *
+from .ultralight import *
